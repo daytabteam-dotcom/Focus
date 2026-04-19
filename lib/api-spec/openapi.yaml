@@ -1,22 +1,37 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: FOCUS ADHD Planner API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: users
+    description: User profile and onboarding
+  - name: tasks
+    description: Task management
+  - name: sessions
+    description: Focus sessions
+  - name: checkins
+    description: Daily mood and body check-ins
+  - name: braindump
+    description: Brain dump and triage
+  - name: dopamine
+    description: Points and rewards
+  - name: regulation
+    description: Nervous system regulation exercises
+  - name: insights
+    description: Summary and insight data
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +39,474 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /users/profile:
+    get:
+      operationId: getUserProfile
+      tags: [users]
+      summary: Get user profile
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "404":
+          description: No profile yet
+    put:
+      operationId: upsertUserProfile
+      tags: [users]
+      summary: Create or update user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertUserProfileBody"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+
+  /tasks:
+    get:
+      operationId: listTasks
+      tags: [tasks]
+      summary: List tasks
+      parameters:
+        - name: bucket
+          in: query
+          schema:
+            type: string
+            enum: [today, later, someday, done]
+        - name: date
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+    post:
+      operationId: createTask
+      tags: [tasks]
+      summary: Create a task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTaskBody"
+      responses:
+        "201":
+          description: Created task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+
+  /tasks/{id}:
+    get:
+      operationId: getTask
+      tags: [tasks]
+      summary: Get a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+    patch:
+      operationId: updateTask
+      tags: [tasks]
+      summary: Update a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTaskBody"
+      responses:
+        "200":
+          description: Updated task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+    delete:
+      operationId: deleteTask
+      tags: [tasks]
+      summary: Delete a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /tasks/{id}/steps:
+    get:
+      operationId: getTaskSteps
+      tags: [tasks]
+      summary: Get micro-steps for a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Steps
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TaskStep"
+    post:
+      operationId: generateTaskSteps
+      tags: [tasks]
+      summary: AI-generate micro-steps for a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Generated steps
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TaskStep"
+
+  /tasks/{taskId}/steps/{stepId}:
+    patch:
+      operationId: updateTaskStep
+      tags: [tasks]
+      summary: Update a task step (mark done, skip)
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: stepId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTaskStepBody"
+      responses:
+        "200":
+          description: Updated step
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskStep"
+
+  /sessions:
+    get:
+      operationId: listSessions
+      tags: [sessions]
+      summary: List focus sessions
+      responses:
+        "200":
+          description: Sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FocusSession"
+    post:
+      operationId: createSession
+      tags: [sessions]
+      summary: Start a focus session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSessionBody"
+      responses:
+        "201":
+          description: Session started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FocusSession"
+
+  /sessions/{id}:
+    patch:
+      operationId: updateSession
+      tags: [sessions]
+      summary: End or update a focus session
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSessionBody"
+      responses:
+        "200":
+          description: Updated session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FocusSession"
+
+  /checkins:
+    get:
+      operationId: listCheckins
+      tags: [checkins]
+      summary: List mood/body check-ins
+      responses:
+        "200":
+          description: Check-ins
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Checkin"
+    post:
+      operationId: createCheckin
+      tags: [checkins]
+      summary: Log a mood and energy check-in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCheckinBody"
+      responses:
+        "201":
+          description: Logged check-in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Checkin"
+
+  /checkins/today:
+    get:
+      operationId: getTodayCheckin
+      tags: [checkins]
+      summary: Get today's latest check-in
+      responses:
+        "200":
+          description: Today's check-in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Checkin"
+        "404":
+          description: No check-in today
+
+  /braindump:
+    post:
+      operationId: createBrainDump
+      tags: [braindump]
+      summary: Submit a brain dump entry for AI triage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBrainDumpBody"
+      responses:
+        "201":
+          description: Triaged brain dump
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BrainDump"
+    get:
+      operationId: listBrainDumps
+      tags: [braindump]
+      summary: List recent brain dumps
+      responses:
+        "200":
+          description: Brain dump entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BrainDump"
+
+  /braindump/{id}/confirm:
+    post:
+      operationId: confirmBrainDumpTriage
+      tags: [braindump]
+      summary: Confirm triage bucket for a brain dump entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmTriageBody"
+      responses:
+        "200":
+          description: Confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BrainDump"
+
+  /regulation/exercises:
+    get:
+      operationId: listRegulationExercises
+      tags: [regulation]
+      summary: List available regulation exercises
+      responses:
+        "200":
+          description: Exercises
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RegulationExercise"
+
+  /regulation/logs:
+    post:
+      operationId: logRegulationExercise
+      tags: [regulation]
+      summary: Log a completed regulation exercise
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LogRegulationBody"
+      responses:
+        "201":
+          description: Logged
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegulationLog"
+
+  /dopamine/points:
+    get:
+      operationId: getDopaminePoints
+      tags: [dopamine]
+      summary: Get current points balance and history
+      responses:
+        "200":
+          description: Points info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DopaminePoints"
+
+  /dopamine/rewards:
+    get:
+      operationId: listRewards
+      tags: [dopamine]
+      summary: List available rewards
+      responses:
+        "200":
+          description: Rewards
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Reward"
+
+  /dopamine/rewards/{id}/redeem:
+    post:
+      operationId: redeemReward
+      tags: [dopamine]
+      summary: Redeem a reward
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Redeemed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DopaminePoints"
+
+  /insights/daily:
+    get:
+      operationId: getDailyInsights
+      tags: [insights]
+      summary: Get today's summary — tasks done, points, mood
+      responses:
+        "200":
+          description: Daily insights
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyInsights"
+
+  /insights/weekly:
+    get:
+      operationId: getWeeklyInsights
+      tags: [insights]
+      summary: Get this week's summary — completion patterns, regulation effectiveness
+      responses:
+        "200":
+          description: Weekly insights
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WeeklyInsights"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +514,380 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        nudgeTime:
+          type: string
+          nullable: true
+        struggles:
+          type: array
+          items:
+            type: string
+        onboardingComplete:
+          type: boolean
+        lastOpenAt:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required: [id, name, onboardingComplete]
+
+    UpsertUserProfileBody:
+      type: object
+      properties:
+        name:
+          type: string
+        nudgeTime:
+          type: string
+          nullable: true
+        struggles:
+          type: array
+          items:
+            type: string
+        onboardingComplete:
+          type: boolean
+        lastOpenAt:
+          type: string
+          nullable: true
+
+    Task:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        timeEstimateMinutes:
+          type: integer
+          nullable: true
+        bucket:
+          type: string
+          enum: [today, later, someday, done]
+        isFocus:
+          type: boolean
+        completedAt:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/TaskStep"
+          nullable: true
+      required: [id, title, bucket, isFocus, createdAt]
+
+    CreateTaskBody:
+      type: object
+      properties:
+        title:
+          type: string
+        timeEstimateMinutes:
+          type: integer
+          nullable: true
+        bucket:
+          type: string
+          enum: [today, later, someday, done]
+        isFocus:
+          type: boolean
+      required: [title, bucket]
+
+    UpdateTaskBody:
+      type: object
+      properties:
+        title:
+          type: string
+        timeEstimateMinutes:
+          type: integer
+          nullable: true
+        bucket:
+          type: string
+          enum: [today, later, someday, done]
+        isFocus:
+          type: boolean
+        completedAt:
+          type: string
+          nullable: true
+
+    TaskStep:
+      type: object
+      properties:
+        id:
+          type: integer
+        taskId:
+          type: integer
+        title:
+          type: string
+        timeEstimateMinutes:
+          type: integer
+        order:
+          type: integer
+        status:
+          type: string
+          enum: [pending, done, skipped]
+      required: [id, taskId, title, timeEstimateMinutes, order, status]
+
+    UpdateTaskStepBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, done, skipped]
+
+    FocusSession:
+      type: object
+      properties:
+        id:
+          type: integer
+        taskId:
+          type: integer
+        durationMinutes:
+          type: integer
+        status:
+          type: string
+          enum: [active, completed, abandoned]
+        startedAt:
+          type: string
+        endedAt:
+          type: string
+          nullable: true
+      required: [id, taskId, durationMinutes, status, startedAt]
+
+    CreateSessionBody:
+      type: object
+      properties:
+        taskId:
+          type: integer
+        durationMinutes:
+          type: integer
+      required: [taskId, durationMinutes]
+
+    UpdateSessionBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [completed, abandoned]
+        endedAt:
+          type: string
+
+    Checkin:
+      type: object
+      properties:
+        id:
+          type: integer
+        mood:
+          type: string
+          enum: [great, good, okay, low, overwhelmed, anxious, numb, frustrated, ashamed, rejected]
+        energyLevel:
+          type: integer
+          minimum: 1
+          maximum: 10
+        bodyZones:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+      required: [id, mood, energyLevel, createdAt]
+
+    CreateCheckinBody:
+      type: object
+      properties:
+        mood:
+          type: string
+          enum: [great, good, okay, low, overwhelmed, anxious, numb, frustrated, ashamed, rejected]
+        energyLevel:
+          type: integer
+          minimum: 1
+          maximum: 10
+        bodyZones:
+          type: array
+          items:
+            type: string
+      required: [mood, energyLevel]
+
+    BrainDump:
+      type: object
+      properties:
+        id:
+          type: integer
+        content:
+          type: string
+        suggestedBucket:
+          type: string
+          enum: [today, later, remind, letitgo]
+          nullable: true
+        confirmedBucket:
+          type: string
+          enum: [today, later, remind, letitgo]
+          nullable: true
+        triageReason:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required: [id, content, createdAt]
+
+    CreateBrainDumpBody:
+      type: object
+      properties:
+        content:
+          type: string
+      required: [content]
+
+    ConfirmTriageBody:
+      type: object
+      properties:
+        bucket:
+          type: string
+          enum: [today, later, remind, letitgo]
+      required: [bucket]
+
+    RegulationExercise:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [physiological_sigh, box_breathing, jaw_release, cold_water, humming]
+        durationSeconds:
+          type: integer
+        bestFor:
+          type: array
+          items:
+            type: string
+        steps:
+          type: array
+          items:
+            type: string
+      required: [id, name, description, type, durationSeconds, bestFor, steps]
+
+    LogRegulationBody:
+      type: object
+      properties:
+        exerciseId:
+          type: integer
+        tensionBefore:
+          type: integer
+          minimum: 1
+          maximum: 10
+        tensionAfter:
+          type: integer
+          minimum: 1
+          maximum: 10
+      required: [exerciseId, tensionBefore, tensionAfter]
+
+    RegulationLog:
+      type: object
+      properties:
+        id:
+          type: integer
+        exerciseId:
+          type: integer
+        tensionBefore:
+          type: integer
+        tensionAfter:
+          type: integer
+        createdAt:
+          type: string
+      required: [id, exerciseId, tensionBefore, tensionAfter, createdAt]
+
+    DopaminePoints:
+      type: object
+      properties:
+        total:
+          type: integer
+        todayEarned:
+          type: integer
+        weekEarned:
+          type: integer
+        recentEvents:
+          type: array
+          items:
+            $ref: "#/components/schemas/PointEvent"
+      required: [total, todayEarned, weekEarned, recentEvents]
+
+    PointEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+        reason:
+          type: string
+        points:
+          type: integer
+        createdAt:
+          type: string
+      required: [id, reason, points, createdAt]
+
+    Reward:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        pointCost:
+          type: integer
+      required: [id, name, description, pointCost]
+
+    DailyInsights:
+      type: object
+      properties:
+        tasksCompleted:
+          type: integer
+        pointsEarned:
+          type: integer
+        focusMinutes:
+          type: integer
+        currentMood:
+          type: string
+          nullable: true
+        energyLevel:
+          type: integer
+          nullable: true
+        streakDots:
+          type: array
+          items:
+            type: boolean
+      required: [tasksCompleted, pointsEarned, focusMinutes, streakDots]
+
+    WeeklyInsights:
+      type: object
+      properties:
+        tasksByDay:
+          type: array
+          items:
+            type: object
+            properties:
+              day:
+                type: string
+              count:
+                type: integer
+            required: [day, count]
+        totalFocusMinutes:
+          type: integer
+        bestRegulationExercise:
+          type: string
+          nullable: true
+        estimationAccuracy:
+          type: number
+          nullable: true
+        totalPointsEarned:
+          type: integer
+      required: [tasksByDay, totalFocusMinutes, totalPointsEarned]
